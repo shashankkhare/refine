@@ -90,9 +90,7 @@ int main()
         HalfedgeDS::Vertex v;
         for (int i=0; i<num_vertices; i++)
         {
-            v = j->vertex();
-            j++;
-            std::cout << v.point()<< "\n";
+            std::cout << j++->vertex()->point()<< "\n";
         };
     }
     return 0;
