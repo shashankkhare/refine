@@ -1,12 +1,12 @@
+#include <CGAL/Polyhedron_incremental_builder_3.h>
+#include "CommonTypes.h"
 //modifier class to build polyhedron from list of points supplied
 template <class HDS>
 class Build_triangle : public CGAL::Modifier_base<HDS>
 {
 private:
     std::vector<Point_3> listp;
-    int nrow;
-    int ncol;
-
+    
 public:
     Build_triangle(std::vector<Point_3> plist)
     {
