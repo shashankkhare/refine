@@ -11,6 +11,7 @@ using namespace std;
 
 void writeSTL(Polyhedron& P, std::string filename)
 {
+    CGAL::set_ascii_mode(std::cout);
     ofstream myfile;
     myfile.open(filename.c_str());
     myfile << P;
@@ -57,8 +58,7 @@ int main(int argc, char** argv)
     P.delegate(triangle_builder);
     
     // write out the mesh
-    std::cout << "OFF" << std::endl << P.size_of_vertices() << ' ' << P.size_of_facets() << " 0" << std::endl;
-    CGAL::set_ascii_mode(std::cout);
+    std::cout << "Mesh :::" << std::endl << P.size_of_vertices() << ' ' << P.size_of_facets() << " 0" << std::endl;
 
     // for ( Vertex_iterator v = P.vertices_begin(); v != P.vertices_end(); ++v)
     //   std::cout << v->point() << std::endl;

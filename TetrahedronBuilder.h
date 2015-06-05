@@ -22,8 +22,9 @@ private:
     double resy;
     int rows;
     int cols;
-    GDALRasterBand* openGDALDS(){
-        		GDALDataset* poDS;
+    GDALRasterBand* openGDALDS()
+    {
+        GDALDataset* poDS;
         GDALAllRegister();
         poDS = (GDALDataset*)GDALOpen(datasrc_name.c_str(), GA_ReadOnly);
         if (poDS == NULL) {
@@ -33,7 +34,7 @@ private:
 
         double adfGeoTransform[6];
         cols = poDS->GetRasterXSize();
-        rows =  poDS->GetRasterYSize();
+        rows = poDS->GetRasterYSize();
         int band_count = poDS->GetRasterCount();
 
         if (poDS->GetGeoTransform(adfGeoTransform) == CE_None) {
@@ -41,72 +42,81 @@ private:
             // error could not get geotransformation data
             return NULL;
         };
-        
+
         startx = adfGeoTransform[0];
         starty = adfGeoTransform[3];
         resx = adfGeoTransform[1];
         resy = adfGeoTransform[5];
-
+        std::cout << "startx = " << startx << " starty= " << starty << " resx= " << resx << " resy=" << resy <<"\n";
         return poDS->GetRasterBand(1);
-    
     }
     /**
      * @brief Generates the tetrahedron from gdal datasource
      * @param hds
      */
-	 void Build(HDS &hds) {
-          {
+    void Build(HDS& hds)
+    {
+
         // open data source
         // by default read the first band
-        GDALRasterBand *poBand = openGDALDS();
-        if (poBand == NULL) return;
-        
-        double *pafScanline;
-        pafScanline = (double *)CPLMalloc(sizeof(double)*cols);
-        
-        for (int i = 0; i < rows; i++) {
-            poBand->RasterIO(GF_Read, 0, 0, cols, 1, pafScanline, cols, 1, GDT_Float64, 0, 0);
-        };
+        GDALRasterBand* poBand = openGDALDS();
+        if (poBand == NULL)
+            return;
 
+        double* pafScanline;
+        pafScanline = (double*)CPLMalloc(sizeof(double) * cols);
         // Postcondition: hds is a valid polyhedral surface.
         CGAL::Polyhedron_incremental_builder_3<HDS> B(hds, true);
         //max num vertices,faces,half edges needs to be provided
         B.begin_surface(rows*cols, rows*cols / 2, rows*cols * 2);
+        
+/********** create vertices *******************/
         for (int i = 0; i < rows; i++) {
-            // add three vertices at a time
-            std::cout << "adding point" << listp[i] << std::endl << std::flush;
-            B.add_vertex(listp[i]);
-            if (i >= 2) {
-
-                B.begin_facet();
-                if (i % 2 == 0) {
+            std::cout << "reading row " << i << "\n";
+            poBand->RasterIO(GF_Read, 0, 0, cols, 1, pafScanline, cols, 1, GDT_Float64, 0, 0);
+            for (int j = 0; j < cols; j++) {
+               B.add_vertex(Point_3(startx+j*resx,starty+i*resy,pafScanline[j])) ;    
+            }
+        };
+        
+/************ create facets here *****************/
+        int first_vid,second_vid,third_vid;
+        for (int i = 0; i < rows; i++) 
+        {
+            for (int j=0;j<cols;j++)
+            {
+                if (i != 0) {
+                    B.begin_facet();
+                    if (j%2 ==0) {
+                    //start adding facets  
+                    first_vid = (i-1)*rows+j;
+                    second_vid = (i-1)*rows + j +1;
+                    third_vid = i*rows+j;
+                    }       
+                    else {
+                        first_vid = i*rows+j;
+                        second_vid = (i-1)*rows+j+1;
+                        third_vid  = i*rows+j +1; 
+                    }
                     B.add_vertex_to_facet(i - 2);
                     B.add_vertex_to_facet(i);
                     B.add_vertex_to_facet(i - 1);
-                } else {
-                    B.add_vertex_to_facet(i - 2);
-                    B.add_vertex_to_facet(i - 1);
-                    B.add_vertex_to_facet(i);
                 }
-                B.end_facet();
             }
         }
         B.end_surface();
-    }
-};
+    };
 
-     
-	 
+
 public:
+TetrahedronBuilder(std::string data_source)
+{
+    datasrc_name = data_source;
+}
 
-    TetrahedronBuilder(std::string data_source)
-    {
-        datasrc_name = data_source;
-    }
-
-    void operator()(HDS& hds)
-	{
-		Build(hds);
-	}
-};
-
+void operator()(HDS& hds)
+{
+    Build(hds);
+}
+}
+;
