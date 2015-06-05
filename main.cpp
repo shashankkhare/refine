@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     std::cout << "file option: " << filename << "\n";
     // build the mesh
     Polyhedron P;
-    Build_triangle<HalfedgeDS> triangle_builder(filename);
+    TetrahedronBuilder<HalfedgeDS> triangle_builder(filename);
     P.delegate(triangle_builder);
     
     // write out the mesh

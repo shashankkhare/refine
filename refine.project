@@ -24,7 +24,6 @@
     <File Name="TetrahedronBuilder.h"/>
     <File Name="CommonTypes.h"/>
     <File Name="optionparser.h"/>
-    <File Name="TetrahedronBuilder.cpp"/>
   </VirtualDirectory>
   <Settings Type="Executable">
     <GlobalSettings>
