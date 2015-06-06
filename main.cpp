@@ -1,20 +1,28 @@
-#include <CGAL/Simple_cartesian.h>
-#include <CGAL/Polyhedron_3.h>
 #include <iostream>
 #include <fstream>
+
+#include <CGAL/Simple_cartesian.h>
+#include <CGAL/Polyhedron_3.h>
 #include <CGAL/IO/Polyhedron_iostream.h>
+// Adaptor for Polyhedron_3
+#include <CGAL/Surface_mesh_simplification/HalfedgeGraph_Polyhedron_3.h>
+// Simplification function
+#include <CGAL/Surface_mesh_simplification/edge_collapse.h>
+// Stop-condition policy
+#include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
 
 #include "CommonTypes.h"
 #include "TetrahedronBuilder.h"
 
 using namespace std;
+namespace SMS = CGAL::Surface_mesh_simplification ;
 
-void writeSTL(Polyhedron& P, std::string filename)
+void writeSTL(Polyhedron& mesh, std::string filename)
 {
-    CGAL::set_ascii_mode(std::cout);
-    ofstream myfile;
-    myfile.open(filename.c_str());
-    myfile << P;
+        CGAL::set_ascii_mode(std::cout);
+    ofstream mfile(filename.c_str());
+    //mfile.open(filename.c_str());
+      mfile<< mesh;    
 };
 
 #include "optionparser.h"
@@ -24,7 +32,7 @@ enum optionIndex {
     PLUS
 };
 const option::Descriptor usage[] = {
-    { FILENAME, 0, "", "file", option::Arg::None, "USAGE: example --file=<filename> \n" },
+    { FILENAME, 0, "f", "file",option::Arg::Optional , "USAGE: example --file=<filename> \n" },
     { HELP, 0, "", "help", option::Arg::None, "  --help  \tPrint usage and exit." },
     { PLUS, 0, "p", "plus", option::Arg::None, "  --plus, -p  \tIncrement count." },
     { 0, 0, 0, 0, 0, 0 }
@@ -48,25 +56,35 @@ int main(int argc, char** argv)
         return 0;
     }
     
-    if (options[FILENAME]) {
+    if (!options[FILENAME]) {
+        std::cout << "Error:elevation file not provided.";
+        return -1;
+    }
     option::Option* opt = options[FILENAME];
-    std::string filename = std::string(opt->name,opt->namelen);
+    std::string filename = std::string(opt->arg);
     std::cout << "file option: " << filename << "\n";
-    // build the mesh
-    Polyhedron P;
+    // build the mesh of the terrain from DEM
+    Polyhedron mesh;
     TetrahedronBuilder<HalfedgeDS> triangle_builder(filename);
-    P.delegate(triangle_builder);
-    
+    mesh.delegate(triangle_builder);
+    writeSTL(mesh, "basic.off");
+ 
+    //simplify the mesh 
+    std::cout << "simplifying mesh ...";
+     SMS::Count_stop_predicate<Polyhedron> stop(mesh.size_of_vertices()/2);
+       int r = SMS::edge_collapse
+            (mesh
+            ,stop
+            ,CGAL::vertex_index_map(boost::get(CGAL::vertex_external_index,mesh)) 
+              .edge_index_map  (boost::get(CGAL::edge_external_index  ,mesh))  
+            );
+  
     // write out the mesh
-    std::cout << "Mesh :::" << std::endl << P.size_of_vertices() << ' ' << P.size_of_facets() << " 0" << std::endl;
+    std::cout << "Mesh :::" << std::endl << mesh.size_of_vertices() << ' ' << mesh.size_of_facets() << " 0" << std::endl;
+    writeSTL(mesh, "simplified.off");
 
-    // for ( Vertex_iterator v = P.vertices_begin(); v != P.vertices_end(); ++v)
-    //   std::cout << v->point() << std::endl;
-
-    writeSTL(P, "test.off");
-    }
-    else {
-        std::cout << "no file specified";
-    }
+    //extrude to form volume
+    //extrude(P);
+    
     return 0;
 }

@@ -3,6 +3,7 @@
 #include <CGAL/Polyhedron_incremental_builder_3.h>
 #include "CommonTypes.h"
 #include <gdal/gdal_priv.h>
+#include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
 
 /**
  * @section DESCRIPTION
@@ -71,40 +72,50 @@ private:
         B.begin_surface(rows*cols, rows*cols / 2, rows*cols * 2);
         
 /********** create vertices *******************/
+            std::cout << "creating vertices \n" ;
         for (int i = 0; i < rows; i++) {
-            std::cout << "reading row " << i << "\n";
-            poBand->RasterIO(GF_Read, 0, 0, cols, 1, pafScanline, cols, 1, GDT_Float64, 0, 0);
+            poBand->RasterIO(GF_Read, 0, i, cols, 1, pafScanline, cols, 1, GDT_Float64, 0, 0);
             for (int j = 0; j < cols; j++) {
                B.add_vertex(Point_3(startx+j*resx,starty+i*resy,pafScanline[j])) ;    
             }
         };
         
 /************ create facets here *****************/
+        std::cout << "creating facets \n";
         int first_vid,second_vid,third_vid;
         for (int i = 0; i < rows; i++) 
         {
-            for (int j=0;j<cols;j++)
+            if (i != 0)
+            for (int j=0;j<cols-1;j++)
             {
-                if (i != 0) {
+            // for each col add two triangles as we 
+            // are creating a tetrahedron. 
+            // 
+                    //add the first facet
                     B.begin_facet();
-                    if (j%2 ==0) {
                     //start adding facets  
-                    first_vid = (i-1)*rows+j;
-                    second_vid = (i-1)*rows + j +1;
-                    third_vid = i*rows+j;
-                    }       
-                    else {
-                        first_vid = i*rows+j;
-                        second_vid = (i-1)*rows+j+1;
-                        third_vid  = i*rows+j +1; 
-                    }
-                    B.add_vertex_to_facet(i - 2);
-                    B.add_vertex_to_facet(i);
-                    B.add_vertex_to_facet(i - 1);
-                }
+                    first_vid = (i-1)*cols+j;
+                    second_vid = (i-1)*cols + j +1;
+                    third_vid = i*cols+j;
+                    B.add_vertex_to_facet(first_vid);
+                    B.add_vertex_to_facet(second_vid);
+                    B.add_vertex_to_facet(third_vid);
+                    B.end_facet();
+                    
+                    //add the second facet
+                    B.begin_facet();
+                    first_vid = i*cols+j;
+                    second_vid = (i-1)*cols+j+1;
+                    third_vid  = i*cols+j +1; 
+                    B.add_vertex_to_facet(first_vid);
+                    B.add_vertex_to_facet(second_vid);
+                    B.add_vertex_to_facet(third_vid);
+                    B.end_facet();
             }
         }
         B.end_surface();
+
+
     };
 
 
